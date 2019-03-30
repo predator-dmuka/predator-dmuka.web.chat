@@ -1,0 +1,58 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.168
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "01-external-files", "01-external-files", "{A6998386-5F71-4DE6-BDEB-D6305F8F634D}"
+	ProjectSection(SolutionItems) = preProject
+		_external-files.md = _external-files.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "02-common", "02-common", "{080C5698-7F8F-4732-8B02-42FFF687C954}"
+	ProjectSection(SolutionItems) = preProject
+		_common.md = _common.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "04-core", "04-core", "{4D5843C1-B73B-4991-A222-E6468342C401}"
+	ProjectSection(SolutionItems) = preProject
+		_core.md = _core.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "03-data", "03-data", "{62B34CD7-DAFE-4D8E-860E-CFD40BACD167}"
+	ProjectSection(SolutionItems) = preProject
+		_data.md = _data.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "08-plugin", "08-plugin", "{975DCD1A-DFA2-43C6-8657-FE2482E600E1}"
+	ProjectSection(SolutionItems) = preProject
+		plugin.md = plugin.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "05-service", "05-service", "{D06945F0-6C7B-4B7D-B502-FA99FBF495E9}"
+	ProjectSection(SolutionItems) = preProject
+		_service.md = _service.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "06-test", "06-test", "{CD408201-6A1B-491A-A8FF-64D8B33728FA}"
+	ProjectSection(SolutionItems) = preProject
+		_test.md = _test.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "07-ui", "07-ui", "{2741C98A-A6B9-44B7-A111-A16C7B16A4C9}"
+	ProjectSection(SolutionItems) = preProject
+		_ui.md = _ui.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_config", "_config", "{F7D03FD5-8EE6-458D-8911-F374C5E404F0}"
+	ProjectSection(SolutionItems) = preProject
+		config.json = config.json
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {7A841A26-B9B0-4206-8767-6D58DAB531DB}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,10 @@
+{
+	"databases": {
+		"PredatorDmuka_Web_Chat": {
+			"connection_string_server": "User ID=postgres;Password=1;Host=localhost;Port=5432;",
+			"connection_string": "User ID=postgres;Password=1;Host=localhost;Port=5432;Database=PredatorDmuka_Web_Chat;"
+		}
+	},
+	"projects": {
+	}
+}
