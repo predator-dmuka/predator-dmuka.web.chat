@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Npgsql;
 using System;
 using System.Collections.Generic;
@@ -11,10 +12,33 @@ namespace deploy
     {
         static void Main(string[] args)
         {
+            if (args.Length > 0)
+            {
+                switch (args[0])
+                {
+                    case "--background":
+                        {
+                            Console.WriteLine(args[1]);
+                            var processJson = JsonConvert.DeserializeObject<JToken>(args[1]);
+                            Helper.RunBashCommand(
+                                processJson["commandName"].Value<string>(),
+                                processJson["name"].Value<string>(),
+                                processJson["arguments"].Value<string>(),
+                                processJson["workingDirectory"].Value<string>(),
+                                true,
+                                true);
+                            return;
+                        }
+                    default:
+                        break;
+                }
+            }
+
             Helper.Md5("test");
 
             Console.WriteLine("====Welcome predator-dmuka.web.chat Deploy====");
             Console.WriteLine("First, you have to make a choice you want.");
+            Console.WriteLine("If you don't know any command, you should use 'help'.");
             Console.WriteLine("Let's begin.");
             Console.WriteLine("---------------------------------------------------");
 
@@ -22,9 +46,9 @@ namespace deploy
             {
                 Console.WriteLine("---------------------------------------------------");
 
-                Console.WriteLine("Write Code (help) = ");
+                Console.WriteLine("Write Code = ");
                 string code = Console.ReadLine();
-                if (code == "00")
+                if (code == "exit")
                     break;
 
                 Console.WriteLine("===================================================");
@@ -35,19 +59,19 @@ namespace deploy
                 {
                     case "help":
                         {
-                            Console.WriteLine("00                                    = Exit Deploy");
-                            Console.WriteLine("db--check-databases                   = Check Databases by 'predator-dmuka.web.chat/source-code/config.js'");
-                            Console.WriteLine("db--update-tables                     = Update Tables with 'predator-dmuka.web.chat/database/<db_name>__migrations' on Databases");
-                            Console.WriteLine("db--remove-all-tables-on-all-database = Remove All Tables on Database");
-                            Console.WriteLine("db--remove-all-tables                 = Remove All Tables on Database You Want");
-                            Console.WriteLine("pr--show-all-projects-status          = Show All Projects Status");
-                            Console.WriteLine("pr--restart-all-projects              = Restart All Projects");
-                            Console.WriteLine("pr--restart-project                   = Restart Project You Want");
-                            Console.WriteLine("pr--kill-all-projects                 = Kill All Projects");
-                            Console.WriteLine("pr--kill-project                      = Kill Project You Want");
+                            Console.WriteLine("exit    = Exit Deploy");
+                            Console.WriteLine("db -c   = Check Databases by 'predator-dmuka.web.chat/source-code/config.js'");
+                            Console.WriteLine("db -u   = Update Tables with 'predator-dmuka.web.chat/database/<db_name>__migrations' on Databases");
+                            Console.WriteLine("db -rta = Remove All Tables on All Database");
+                            Console.WriteLine("db -rt  = Remove All Tables on Database You Want");
+                            Console.WriteLine("pr -s   = Show All Projects Status");
+                            Console.WriteLine("pr -ra  = Restart All Projects");
+                            Console.WriteLine("pr -r   = Restart Project You Want");
+                            Console.WriteLine("pr -ka  = Kill All Projects");
+                            Console.WriteLine("pr -k   = Kill Project You Want");
                         }
                         break;
-                    case "db--check-databases":
+                    case "db -c":
                         {
                             var databases = (JObject)Helper.GetConfigAsJToken("databases");
 
@@ -84,7 +108,7 @@ namespace deploy
                             }
                         }
                         break;
-                    case "db--update-tables":
+                    case "db -u":
                         {
                             var databases = (JObject)Helper.GetConfigAsJToken("databases");
 
@@ -120,7 +144,7 @@ namespace deploy
                             }
                         }
                         break;
-                    case "db--remove-all-tables-all-database":
+                    case "db -rta":
                         {
                             var databases = (JObject)Helper.GetConfigAsJToken("databases");
 
@@ -128,7 +152,7 @@ namespace deploy
                                 removeAllDatasFromDatabase(property);
                         }
                         break;
-                    case "db--remove-all-tables":
+                    case "db -rt":
                         {
                             var databases = (JObject)Helper.GetConfigAsJToken("databases");
 
@@ -141,7 +165,7 @@ namespace deploy
                             });
                         }
                         break;
-                    case "pr--show-all-projects-status":
+                    case "pr -s":
                         {
                             var projects = (JObject)Helper.GetConfigAsJToken("projects");
                             foreach (var project in projects)
@@ -157,7 +181,7 @@ namespace deploy
                             }
                         }
                         break;
-                    case "pr--restart-all-projects":
+                    case "pr -ra":
                         {
                             var projects = (JObject)Helper.GetConfigAsJToken("projects");
 
@@ -165,7 +189,7 @@ namespace deploy
                                 restartProject(project);
                         }
                         break;
-                    case "pr--restart-project":
+                    case "pr -r":
                         {
                             var projects = (JObject)Helper.GetConfigAsJToken("projects");
 
@@ -175,14 +199,14 @@ namespace deploy
                             restartProject(new KeyValuePair<string, JToken>(projectName, projects[projectName]));
                         }
                         break;
-                    case "pr--kill-all-projects":
+                    case "pr -ka":
                         {
                             var projects = (JObject)Helper.GetConfigAsJToken("projects");
                             foreach (var project in projects)
                                 killProject(project);
                         }
                         break;
-                    case "pr--kill-project":
+                    case "pr -k":
                         {
                             var projects = (JObject)Helper.GetConfigAsJToken("projects");
 
@@ -193,7 +217,7 @@ namespace deploy
                         }
                         break;
                     default:
-                        Console.WriteLine("Wrong code. Please write a code which is in the list. For example, '00' is for exit.");
+                        Console.WriteLine("Wrong code. Please write a code which is in the list. For example, 'exit' is for exit.");
                         break;
                 }
 
@@ -234,7 +258,7 @@ namespace deploy
 
                 var commandName = command["name"].Value<string>();
 
-                Helper.RunBashCommand(project.Key, commandName, command["arguments"].Value<string>(), command["path"].Value<string>(), !commandIsMain, commandIsMain);
+                Helper.RunBashCommand(project.Key, commandName, command["arguments"].Value<string>(), command["path"].Value<string>(), commandIsMain, false);
             }
 
             Console.WriteLine("{0} project's commands completed.", project.Key);
@@ -243,10 +267,10 @@ namespace deploy
         private static void removeAllDatasFromDatabase(KeyValuePair<string, JToken> property)
         {
             Console.WriteLine("We are trying to connect to server...", property.Key);
-            var connectionStringServer = property.Value["connection_string_server"].Value<string>();
+            var connectionString = property.Value["connection_string"].Value<string>();
             Helper.TryCatch(() =>
             {
-                using (NpgsqlConnection connection = new NpgsqlConnection(connectionStringServer))
+                using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
                 {
                     connection.Open();
 
@@ -255,7 +279,7 @@ DO $$
 DECLARE 
     brow record;
 BEGIN
-    FOR brow IN (select 'drop table ""' || tablename || '"" cascade;' as table_name from pg_tables where schemaname <> 'pg_catalog' AND schemaname <> 'information_schema') LOOP
+    FOR brow IN (select 'drop table ""' || schemaname || '"".""' || tablename || '"" cascade;' as table_name from pg_tables where schemaname <> 'pg_catalog' AND schemaname <> 'information_schema') LOOP
         EXECUTE brow.table_name;
     END LOOP;
 END; $$

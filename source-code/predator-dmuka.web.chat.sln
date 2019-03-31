@@ -25,7 +25,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "03-data", "03-data", "{62B3
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "08-plugin", "08-plugin", "{975DCD1A-DFA2-43C6-8657-FE2482E600E1}"
 	ProjectSection(SolutionItems) = preProject
-		plugin.md = plugin.md
+		_plugin.md = _plugin.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "05-service", "05-service", "{D06945F0-6C7B-4B7D-B502-FA99FBF495E9}"
@@ -48,7 +48,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_config", "_config", "{F7D0
 		config.json = config.json
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.ConsoleApp", "Test.ConsoleApp\Test.ConsoleApp.csproj", "{7C8B539D-903F-4010-A120-F787636ACEDE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.ConsoleApp", "Test.ConsoleApp\Test.ConsoleApp.csproj", "{7C8B539D-903F-4010-A120-F787636ACEDE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

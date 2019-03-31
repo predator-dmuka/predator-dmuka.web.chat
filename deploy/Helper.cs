@@ -15,25 +15,31 @@ namespace deploy
     public static class Helper
     {
         #region Variables
+        static string __currentDirectoryPath = "";
         static string __configPath = "";
         static string __databasePath = "";
         static string __sourceCodePath = "";
+        static string __logPath = "";
         static string __bashProcessesPath = "";
         #endregion
 
         #region Constructors
         static Helper()
         {
-            string currentDirectory = Directory.GetCurrentDirectory();
-            __bashProcessesPath = Path.Combine(currentDirectory, "bash-processes.txt");
+            __currentDirectoryPath = Directory.GetCurrentDirectory();
+            __bashProcessesPath = Path.Combine(__currentDirectoryPath, "bash-processes.txt");
+            __logPath = Path.Combine(__currentDirectoryPath, "log");
+
+            if (Directory.Exists(__logPath) == false)
+                Directory.CreateDirectory(__logPath);
 
             if (
-                File.Exists(__bashProcessesPath) == false || 
+                File.Exists(__bashProcessesPath) == false ||
                 (DateTime.UtcNow.AddMilliseconds(-1 * Environment.TickCount) - new DateTime(Convert.ToInt64(File.ReadAllText(__bashProcessesPath).Split(new char[] { '~' }, StringSplitOptions.RemoveEmptyEntries)[0]))).TotalSeconds > 1
                 )
                 File.WriteAllText(__bashProcessesPath, DateTime.UtcNow.AddMilliseconds(-1 * Environment.TickCount).Ticks.ToString());
 
-            string parent = Directory.GetParent(currentDirectory).FullName;
+            string parent = Directory.GetParent(__currentDirectoryPath).FullName;
             __sourceCodePath = Path.Combine(parent, "source-code");
             __configPath = Path.Combine(__sourceCodePath, "config.json");
             __databasePath = Path.Combine(parent, "database");
@@ -199,30 +205,42 @@ $do$
             return sb.ToString();
         }
 
-        public static void RunBashCommand(string commandName, string name, string arguments, string workingDirectory, bool main, bool killPrevious)
+        public static void RunBashCommand(string commandName, string name, string arguments, string workingDirectory, bool main, bool fromArgs, bool background = false)
         {
+            if (main == true && fromArgs == false)
+            {
+                RunBashCommand(commandName, "dotnet", "run --background \"" + JsonConvert.SerializeObject(new
+                {
+                    commandName = commandName,
+                    name = name,
+                    arguments = arguments,
+                    workingDirectory = workingDirectory
+                }).Replace("\"", "\\\"") + "\" --configuration RELEASE", "", false, false, true);
+                return;
+            }
+
             commandName = commandName.Replace("~", "-").Replace("/", "-");
 
-            var cmd = (name + " " + arguments) + (main == false ? " &" : "");
+            var cmd = (name + " " + arguments) + (main == true ? " &" : "");
 
-            if (main == false)
+            if (main == true)
                 cmd += Environment.NewLine + "echo \"-*=*-\"$!\"-*=*-\"";
 
-            if (killPrevious == true)
+            if (main == true)
             {
                 var processId = GetBashProcessId(commandName);
                 if (processId != "")
-                {
-
                     cmd = "kill " + processId + Environment.NewLine + cmd;
-                }
             }
+
+            string cwd = background == true ? __currentDirectoryPath : Path.Combine(__sourceCodePath, workingDirectory);
 
             Console.WriteLine();
             Console.WriteLine("****************************************");
             Console.WriteLine();
             Console.WriteLine("Process Name = " + name);
             Console.WriteLine("CMD = " + cmd);
+            Console.WriteLine("Working Directory = " + cwd);
             Console.WriteLine();
             Console.WriteLine("****************************************");
             Console.WriteLine();
@@ -232,8 +250,8 @@ $do$
                 StartInfo = new ProcessStartInfo
                 {
                     FileName = "sh",
-                    WorkingDirectory = Path.Combine(__sourceCodePath, workingDirectory),
-                    Arguments = "-c \"" + cmd.Replace("\"", "\\\"") + "\"",
+                    WorkingDirectory = cwd,
+                    Arguments = "-c \"" + cmd.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"",
                     RedirectStandardOutput = true,
                     UseShellExecute = false,
                     CreateNoWindow = true,
@@ -251,21 +269,39 @@ $do$
                     var split = b.Data.Split(new string[] { "-*=*-" }, StringSplitOptions.None);
                     newProcessId = split[1];
                 }
-                Console.WriteLine(b.Data);
+
+                if (main == false)
+                    Console.WriteLine(b.Data);
+                else
+                {
+                    lock (__logPath)
+                    {
+                        var commandLogDirectory = Path.Combine(__logPath, commandName);
+                        if (Directory.Exists(commandLogDirectory) == false)
+                            Directory.CreateDirectory(commandLogDirectory);
+
+                        File.AppendAllText(Path.Combine(commandLogDirectory, DateTime.Now.ToString("yyyy-MM-dd") + ".txt"), b.Data + Environment.NewLine);
+                    }
+                }
             };
+
             process.ErrorDataReceived += (a, b) => Console.WriteLine(b.Data);
             process.Start();
-            process.BeginErrorReadLine();
-            process.BeginOutputReadLine();
 
-            if (main)
-                process.WaitForExit();
+            if (background == false)
+            {
+                process.BeginErrorReadLine();
+                process.BeginOutputReadLine();
+            }
 
-            while (main == false && newProcessId == "")
+            while (main == true && newProcessId == "")
                 Thread.Sleep(1);
 
-            if (main == false)
+            if (main == true)
                 SetBashProcessId(commandName, newProcessId);
+
+            if (background == false)
+                process.WaitForExit();
         }
 
         public static void KillBashProcess(string commandName, string workingDirectory)
