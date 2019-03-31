@@ -27,8 +27,11 @@ namespace deploy
             string currentDirectory = Directory.GetCurrentDirectory();
             __bashProcessesPath = Path.Combine(currentDirectory, "bash-processes.txt");
 
-            if (File.Exists(__bashProcessesPath) == false)
-                File.WriteAllText(__bashProcessesPath, "");
+            if (
+                File.Exists(__bashProcessesPath) == false || 
+                (DateTime.UtcNow.AddMilliseconds(-1 * Environment.TickCount) - new DateTime(Convert.ToInt64(File.ReadAllText(__bashProcessesPath).Split(new char[] { '~' }, StringSplitOptions.RemoveEmptyEntries)[0]))).TotalSeconds > 1
+                )
+                File.WriteAllText(__bashProcessesPath, DateTime.UtcNow.AddMilliseconds(-1 * Environment.TickCount).Ticks.ToString());
 
             string parent = Directory.GetParent(currentDirectory).FullName;
             __sourceCodePath = Path.Combine(parent, "source-code");
@@ -137,11 +140,11 @@ $do$
             }
         }
 
-        public static string GetBashProcess(string name)
+        public static string GetBashProcessId(string name)
         {
             var bashProcessesList = File.ReadAllText(__bashProcessesPath).Split(new char[] { '~' }, StringSplitOptions.RemoveEmptyEntries).ToList();
 
-            for (int i = 0; i < bashProcessesList.Count; i++)
+            for (int i = 1; i < bashProcessesList.Count; i++)
             {
                 var bashProcess = bashProcessesList[i];
 
@@ -154,13 +157,13 @@ $do$
             return "";
         }
 
-        public static void SetBashProcess(string name, string processId)
+        public static void SetBashProcessId(string name, string processId)
         {
             var bashProcessesList = File.ReadAllText(__bashProcessesPath).Split(new char[] { '~' }, StringSplitOptions.RemoveEmptyEntries).ToList();
             var newRow = name + "/" + processId;
 
             var exists = false;
-            for (int i = 0; i < bashProcessesList.Count; i++)
+            for (int i = 1; i < bashProcessesList.Count; i++)
             {
                 var bashProcess = bashProcessesList[i];
 
@@ -207,9 +210,12 @@ $do$
 
             if (killPrevious == true)
             {
-                var processId = GetBashProcess(commandName);
+                var processId = GetBashProcessId(commandName);
                 if (processId != "")
+                {
+
                     cmd = "kill " + processId + Environment.NewLine + cmd;
+                }
             }
 
             Console.WriteLine();
@@ -259,7 +265,7 @@ $do$
                 Thread.Sleep(1);
 
             if (main == false)
-                SetBashProcess(commandName, newProcessId);
+                SetBashProcessId(commandName, newProcessId);
         }
 
         public static void KillBashProcess(string commandName, string workingDirectory)
@@ -267,13 +273,17 @@ $do$
             commandName = commandName.Replace("~", "-").Replace("/", "-");
 
             string cmd = "";
-            var processId = GetBashProcess(commandName);
+            var processId = GetBashProcessId(commandName);
             if (processId != "")
                 cmd = "kill " + processId + Environment.NewLine + cmd;
 
+            Console.WriteLine();
             Console.WriteLine("****************************************");
+            Console.WriteLine();
             Console.WriteLine("CMD = " + cmd);
+            Console.WriteLine();
             Console.WriteLine("****************************************");
+            Console.WriteLine();
 
             var process = new Process()
             {
@@ -299,7 +309,7 @@ $do$
 
             process.WaitForExit();
 
-            SetBashProcess(commandName, "");
+            SetBashProcessId(commandName, "");
         }
 
         #endregion

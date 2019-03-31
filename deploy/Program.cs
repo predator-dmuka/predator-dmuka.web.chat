@@ -11,6 +11,8 @@ namespace deploy
     {
         static void Main(string[] args)
         {
+            Helper.Md5("test");
+
             Console.WriteLine("====Welcome predator-dmuka.web.chat Deploy====");
             Console.WriteLine("First, you have to make a choice you want.");
             Console.WriteLine("Let's begin.");
@@ -147,7 +149,7 @@ namespace deploy
                                 bool open = false;
                                 try
                                 {
-                                    open = Process.GetProcessById(Convert.ToInt32(Helper.GetBashProcess(project.Key))).HasExited == false;
+                                    open = Process.GetProcessById(Convert.ToInt32(Helper.GetBashProcessId(project.Key))).HasExited == false;
                                 }
                                 catch { }
 
@@ -158,9 +160,6 @@ namespace deploy
                     case "pr--restart-all-projects":
                         {
                             var projects = (JObject)Helper.GetConfigAsJToken("projects");
-
-                            Console.WriteLine("Write you db name = ");
-                            var dbName = Console.ReadLine();
 
                             foreach (var project in projects)
                                 restartProject(project);
