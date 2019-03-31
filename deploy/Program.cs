@@ -2,6 +2,7 @@
 using Npgsql;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 
 namespace deploy
@@ -19,21 +20,32 @@ namespace deploy
             {
                 Console.WriteLine("---------------------------------------------------");
 
-                Console.WriteLine("00\t\t= Exit Deploy");
-                Console.WriteLine("DB-001\t\t= Check Databases by 'predator-dmuka.web.chat/source-code/config.js'");
-                Console.WriteLine("DB-002\t\t= Update Tables with 'predator-dmuka.web.chat/database/<db_name>__migrations' on Databases");
-                Console.WriteLine("DB-003\t\t= Remove All Table on Database (We will ask for each)");
-
-                Console.Write("Write Code = ");
+                Console.WriteLine("Write Code (help) = ");
                 string code = Console.ReadLine();
                 if (code == "00")
                     break;
 
                 Console.WriteLine("===================================================");
                 Console.WriteLine("Begin of " + code);
+                Console.WriteLine(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+                Console.WriteLine();
                 switch (code)
                 {
-                    case "DB-001":
+                    case "help":
+                        {
+                            Console.WriteLine("00                                    = Exit Deploy");
+                            Console.WriteLine("db--check-databases                   = Check Databases by 'predator-dmuka.web.chat/source-code/config.js'");
+                            Console.WriteLine("db--update-tables                     = Update Tables with 'predator-dmuka.web.chat/database/<db_name>__migrations' on Databases");
+                            Console.WriteLine("db--remove-all-tables-on-all-database = Remove All Tables on Database");
+                            Console.WriteLine("db--remove-all-tables                 = Remove All Tables on Database You Want");
+                            Console.WriteLine("pr--show-all-projects-status          = Show All Projects Status");
+                            Console.WriteLine("pr--restart-all-projects              = Restart All Projects");
+                            Console.WriteLine("pr--restart-project                   = Restart Project You Want");
+                            Console.WriteLine("pr--kill-all-projects                 = Kill All Projects");
+                            Console.WriteLine("pr--kill-project                      = Kill Project You Want");
+                        }
+                        break;
+                    case "db--check-databases":
                         {
                             var databases = (JObject)Helper.GetConfigAsJToken("databases");
 
@@ -41,31 +53,23 @@ namespace deploy
                             {
                                 Console.WriteLine("We are trying to connect to server...");
                                 var connectionStringServer = property.Value["connection_string_server"].Value<string>();
-                                try
-                                {
-                                    using (NpgsqlConnection connection = new NpgsqlConnection(connectionStringServer))
+                                if (Helper.TryCatch(
+                                    () =>
                                     {
-                                        connection.Open();
-                                        connection.Close();
-                                    }
+                                        using (NpgsqlConnection connection = new NpgsqlConnection(connectionStringServer))
+                                        {
+                                            connection.Open();
+                                            connection.Close();
+                                        }
 
-                                    Console.WriteLine("We connected to server successfully.", property.Key);
-                                }
-                                catch (Exception ex)
-                                {
-                                    Console.Write("We couldn't. Do you want see the error? (y/n) ");
-                                    if (Console.ReadLine().ToLower() == "y")
-                                    {
-                                        Console.WriteLine(ex.ToString());
-                                        Console.WriteLine("Enter a line to continue checking database...");
-                                        Console.ReadLine();
-                                    }
+                                        Console.WriteLine("We connected to server successfully.", property.Key);
+                                    }) == false)
                                     continue;
-                                }
 
                                 Console.WriteLine("We are trying to connect to '{0}' database...", property.Key);
                                 var connectionString = property.Value["connection_string"].Value<string>();
-                                try
+
+                                Helper.TryCatch(() =>
                                 {
                                     using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
                                     {
@@ -74,22 +78,11 @@ namespace deploy
                                     }
 
                                     Console.WriteLine("We connected to '{0}' database successfully.", property.Key);
-                                }
-                                catch (Exception ex)
-                                {
-                                    Console.Write("We couldn't. Do you want see the error? (y/n) ");
-                                    if (Console.ReadLine().ToLower() == "y")
-                                    {
-                                        Console.WriteLine(ex.ToString());
-                                        Console.WriteLine("Enter a line to continue checking database...");
-                                        Console.ReadLine();
-                                    }
-
-                                }
+                                });
                             }
                         }
                         break;
-                    case "DB-002":
+                    case "db--update-tables":
                         {
                             var databases = (JObject)Helper.GetConfigAsJToken("databases");
 
@@ -97,7 +90,7 @@ namespace deploy
                             {
                                 Console.WriteLine("We are trying to connect to '{0}' database...", property.Key);
                                 var connectionString = property.Value["connection_string"].Value<string>();
-                                try
+                                Helper.TryCatch(() =>
                                 {
                                     using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
                                     {
@@ -121,40 +114,144 @@ namespace deploy
                                     }
 
                                     Console.WriteLine("We updated to '{0}' database successfully.", property.Key);
-                                }
-                                catch (Exception ex)
-                                {
-                                    Console.Write("We couldn't. Do you want see the error? (y/n) ");
-                                    if (Console.ReadLine().ToLower() == "y")
-                                    {
-                                        Console.WriteLine(ex.ToString());
-                                        Console.WriteLine("Enter a line to continue checking database...");
-                                        Console.ReadLine();
-                                    }
-
-                                }
+                                });
                             }
                         }
                         break;
-                    case "DB-003":
+                    case "db--remove-all-tables-all-database":
                         {
                             var databases = (JObject)Helper.GetConfigAsJToken("databases");
 
                             foreach (var property in databases)
-                            {
-                                Console.Write("Do you want to remove all table on {0} database? (y/n) ", property.Key);
-                                if (Console.ReadLine().ToLower() != "y")
-                                    continue;
+                                removeAllDatasFromDatabase(property);
+                        }
+                        break;
+                    case "db--remove-all-tables":
+                        {
+                            var databases = (JObject)Helper.GetConfigAsJToken("databases");
 
-                                Console.WriteLine("We are trying to connect to server...", property.Key);
-                                var connectionStringServer = property.Value["connection_string_server"].Value<string>();
+                            Console.WriteLine("Write you db name = ");
+                            var dbName = Console.ReadLine();
+
+                            Helper.TryCatch(() =>
+                            {
+                                removeAllDatasFromDatabase(new KeyValuePair<string, JToken>(dbName, databases[dbName]));
+                            });
+                        }
+                        break;
+                    case "pr--show-all-projects-status":
+                        {
+                            var projects = (JObject)Helper.GetConfigAsJToken("projects");
+                            foreach (var project in projects)
+                            {
+                                bool open = false;
                                 try
                                 {
-                                    using (NpgsqlConnection connection = new NpgsqlConnection(connectionStringServer))
-                                    {
-                                        connection.Open();
+                                    open = Process.GetProcessById(Convert.ToInt32(Helper.GetBashProcess(project.Key))).HasExited == false;
+                                }
+                                catch { }
 
-                                        string clearTablesSql = @"
+                                Console.WriteLine("\"{0}\"\t\t\t= \"{1}\"", project.Key, open ? "OPENED" : "CLOSED");
+                            }
+                        }
+                        break;
+                    case "pr--restart-all-projects":
+                        {
+                            var projects = (JObject)Helper.GetConfigAsJToken("projects");
+
+                            Console.WriteLine("Write you db name = ");
+                            var dbName = Console.ReadLine();
+
+                            foreach (var project in projects)
+                                restartProject(project);
+                        }
+                        break;
+                    case "pr--restart-project":
+                        {
+                            var projects = (JObject)Helper.GetConfigAsJToken("projects");
+
+                            Console.WriteLine("Write you project name = ");
+                            var projectName = Console.ReadLine();
+
+                            restartProject(new KeyValuePair<string, JToken>(projectName, projects[projectName]));
+                        }
+                        break;
+                    case "pr--kill-all-projects":
+                        {
+                            var projects = (JObject)Helper.GetConfigAsJToken("projects");
+                            foreach (var project in projects)
+                                killProject(project);
+                        }
+                        break;
+                    case "pr--kill-project":
+                        {
+                            var projects = (JObject)Helper.GetConfigAsJToken("projects");
+
+                            Console.WriteLine("Write you project name = ");
+                            var projectName = Console.ReadLine();
+
+                            killProject(new KeyValuePair<string, JToken>(projectName, projects[projectName]));
+                        }
+                        break;
+                    default:
+                        Console.WriteLine("Wrong code. Please write a code which is in the list. For example, '00' is for exit.");
+                        break;
+                }
+
+                Console.WriteLine();
+                Console.WriteLine("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
+                Console.WriteLine("End of " + code);
+            }
+
+            Console.WriteLine("We hope that you don't come here again. Type a line to exit...");
+            Console.ReadLine();
+        }
+
+        private static void killProject(KeyValuePair<string, JToken> project)
+        {
+            Console.WriteLine("{0} project's commands is being killed...", project.Key);
+
+            var commands = (JArray)project.Value["commands"];
+            foreach (var command in commands)
+            {
+                var commandIsMain = command["main"].Value<bool>();
+
+                var commandName = command["name"].Value<string>();
+                if (commandIsMain == true)
+                    Helper.KillBashProcess(project.Key, command["path"].Value<string>());
+            }
+
+            Console.WriteLine("{0} project's commands completed.", project.Key);
+        }
+
+        private static void restartProject(KeyValuePair<string, JToken> project)
+        {
+            Console.WriteLine("{0} project's commands is running...", project.Key);
+
+            var commands = (JArray)project.Value["commands"];
+            foreach (var command in commands)
+            {
+                var commandIsMain = command["main"].Value<bool>();
+
+                var commandName = command["name"].Value<string>();
+
+                Helper.RunBashCommand(project.Key, commandName, command["arguments"].Value<string>(), command["path"].Value<string>(), !commandIsMain, commandIsMain);
+            }
+
+            Console.WriteLine("{0} project's commands completed.", project.Key);
+        }
+
+        private static void removeAllDatasFromDatabase(KeyValuePair<string, JToken> property)
+        {
+            Console.WriteLine("We are trying to connect to server...", property.Key);
+            var connectionStringServer = property.Value["connection_string_server"].Value<string>();
+            Helper.TryCatch(() =>
+            {
+                using (NpgsqlConnection connection = new NpgsqlConnection(connectionStringServer))
+                {
+                    connection.Open();
+
+                    string clearTablesSql = @"
 DO $$
 DECLARE 
     brow record;
@@ -164,38 +261,14 @@ BEGIN
     END LOOP;
 END; $$
 ";
-                                        using (NpgsqlCommand clearTablesCommand = new NpgsqlCommand(clearTablesSql, connection))
-                                            clearTablesCommand.ExecuteNonQuery();
+                    using (NpgsqlCommand clearTablesCommand = new NpgsqlCommand(clearTablesSql, connection))
+                        clearTablesCommand.ExecuteNonQuery();
 
-                                        connection.Close();
-                                    }
-
-                                    Console.WriteLine("We removed all tables on '{0}' database successfully.", property.Key);
-                                }
-                                catch (Exception ex)
-                                {
-                                    Console.Write("We couldn't. Do you want see the error? (y/n) ");
-                                    if (Console.ReadLine().ToLower() == "y")
-                                    {
-                                        Console.WriteLine(ex.ToString());
-                                        Console.WriteLine("Enter a line to continue checking database...");
-                                        Console.ReadLine();
-                                    }
-
-                                }
-                            }
-                        }
-                        break;
-                    default:
-                        Console.WriteLine("Wrong code. Please write a code which is in the list. For example, '00' is for exit.");
-                        break;
+                    connection.Close();
                 }
 
-                Console.WriteLine("End of " + code);
-            }
-
-            Console.WriteLine("We hope that you don't come here again. Type a line to exit...");
-            Console.ReadLine();
+                Console.WriteLine("We removed all tables on '{0}' database successfully.", property.Key);
+            });
         }
     }
 }

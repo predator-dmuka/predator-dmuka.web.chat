@@ -48,9 +48,24 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_config", "_config", "{F7D0
 		config.json = config.json
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.ConsoleApp", "Test.ConsoleApp\Test.ConsoleApp.csproj", "{7C8B539D-903F-4010-A120-F787636ACEDE}"
+EndProject
 Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7C8B539D-903F-4010-A120-F787636ACEDE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7C8B539D-903F-4010-A120-F787636ACEDE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7C8B539D-903F-4010-A120-F787636ACEDE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7C8B539D-903F-4010-A120-F787636ACEDE}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{7C8B539D-903F-4010-A120-F787636ACEDE} = {CD408201-6A1B-491A-A8FF-64D8B33728FA}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {7A841A26-B9B0-4206-8767-6D58DAB531DB}

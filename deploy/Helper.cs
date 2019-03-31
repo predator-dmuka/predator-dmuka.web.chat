@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Npgsql;
@@ -14,14 +17,22 @@ namespace deploy
         #region Variables
         static string __configPath = "";
         static string __databasePath = "";
+        static string __sourceCodePath = "";
+        static string __bashProcessesPath = "";
         #endregion
 
         #region Constructors
         static Helper()
         {
             string currentDirectory = Directory.GetCurrentDirectory();
+            __bashProcessesPath = Path.Combine(currentDirectory, "bash-processes.txt");
+
+            if (File.Exists(__bashProcessesPath) == false)
+                File.WriteAllText(__bashProcessesPath, "");
+
             string parent = Directory.GetParent(currentDirectory).FullName;
-            __configPath = Path.Combine(parent, "source-code", "config.json");
+            __sourceCodePath = Path.Combine(parent, "source-code");
+            __configPath = Path.Combine(__sourceCodePath, "config.json");
             __databasePath = Path.Combine(parent, "database");
         }
         #endregion
@@ -103,6 +114,194 @@ $do$
                 }
             }
         }
+
+        public static bool TryCatch(Action action)
+        {
+            try
+            {
+                action();
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("We couldn't. Do you want see the error? (y/n) ");
+                if (Console.ReadLine().ToLower() == "y")
+                {
+                    Console.WriteLine(ex.ToString());
+                    Console.WriteLine("Enter a line to continue checking database...");
+                    Console.ReadLine();
+                }
+
+                return false;
+            }
+        }
+
+        public static string GetBashProcess(string name)
+        {
+            var bashProcessesList = File.ReadAllText(__bashProcessesPath).Split(new char[] { '~' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+
+            for (int i = 0; i < bashProcessesList.Count; i++)
+            {
+                var bashProcess = bashProcessesList[i];
+
+                string bashProcessName = bashProcess.Split('/')[0];
+
+                if (bashProcessName == name)
+                    return bashProcess.Split('/')[1];
+            }
+
+            return "";
+        }
+
+        public static void SetBashProcess(string name, string processId)
+        {
+            var bashProcessesList = File.ReadAllText(__bashProcessesPath).Split(new char[] { '~' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+            var newRow = name + "/" + processId;
+
+            var exists = false;
+            for (int i = 0; i < bashProcessesList.Count; i++)
+            {
+                var bashProcess = bashProcessesList[i];
+
+                string bashProcessName = bashProcess.Split('/')[0];
+
+                if (bashProcessName == name)
+                {
+                    exists = true;
+                    bashProcessesList[i] = newRow;
+                    break;
+                }
+            }
+
+            if (exists == false)
+                bashProcessesList.Add(newRow);
+
+            File.WriteAllText(__bashProcessesPath, string.Join("~", bashProcessesList));
+        }
+
+
+        public static string Md5(string metin)
+        {
+            MD5CryptoServiceProvider md5 = new MD5CryptoServiceProvider();
+            byte[] btr = Encoding.UTF8.GetBytes(metin);
+            btr = md5.ComputeHash(btr);
+            StringBuilder sb = new StringBuilder();
+
+            foreach (byte ba in btr)
+            {
+                sb.Append(ba.ToString("x2").ToLower());
+            }
+
+            return sb.ToString();
+        }
+
+        public static void RunBashCommand(string commandName, string name, string arguments, string workingDirectory, bool main, bool killPrevious)
+        {
+            commandName = commandName.Replace("~", "-").Replace("/", "-");
+
+            var cmd = (name + " " + arguments) + (main == false ? " &" : "");
+
+            if (main == false)
+                cmd += Environment.NewLine + "echo \"-*=*-\"$!\"-*=*-\"";
+
+            if (killPrevious == true)
+            {
+                var processId = GetBashProcess(commandName);
+                if (processId != "")
+                    cmd = "kill " + processId + Environment.NewLine + cmd;
+            }
+
+            Console.WriteLine();
+            Console.WriteLine("****************************************");
+            Console.WriteLine();
+            Console.WriteLine("Process Name = " + name);
+            Console.WriteLine("CMD = " + cmd);
+            Console.WriteLine();
+            Console.WriteLine("****************************************");
+            Console.WriteLine();
+
+            var process = new Process()
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "sh",
+                    WorkingDirectory = Path.Combine(__sourceCodePath, workingDirectory),
+                    Arguments = "-c \"" + cmd.Replace("\"", "\\\"") + "\"",
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardInput = true,
+                    RedirectStandardError = true,
+                    ErrorDialog = false
+                }
+            };
+
+            string newProcessId = "";
+            process.OutputDataReceived += (a, b) =>
+            {
+                if (b.Data != null && newProcessId == "" && b.Data.Contains("-*=*-"))
+                {
+                    var split = b.Data.Split(new string[] { "-*=*-" }, StringSplitOptions.None);
+                    newProcessId = split[1];
+                }
+                Console.WriteLine(b.Data);
+            };
+            process.ErrorDataReceived += (a, b) => Console.WriteLine(b.Data);
+            process.Start();
+            process.BeginErrorReadLine();
+            process.BeginOutputReadLine();
+
+            if (main)
+                process.WaitForExit();
+
+            while (main == false && newProcessId == "")
+                Thread.Sleep(1);
+
+            if (main == false)
+                SetBashProcess(commandName, newProcessId);
+        }
+
+        public static void KillBashProcess(string commandName, string workingDirectory)
+        {
+            commandName = commandName.Replace("~", "-").Replace("/", "-");
+
+            string cmd = "";
+            var processId = GetBashProcess(commandName);
+            if (processId != "")
+                cmd = "kill " + processId + Environment.NewLine + cmd;
+
+            Console.WriteLine("****************************************");
+            Console.WriteLine("CMD = " + cmd);
+            Console.WriteLine("****************************************");
+
+            var process = new Process()
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "sh",
+                    WorkingDirectory = Path.Combine(__sourceCodePath, workingDirectory),
+                    Arguments = "-c \"" + cmd.Replace("\"", "\\\"") + "\"",
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardInput = true,
+                    RedirectStandardError = true,
+                    ErrorDialog = false
+                }
+            };
+
+            process.OutputDataReceived += (a, b) => Console.WriteLine(b.Data);
+            process.ErrorDataReceived += (a, b) => Console.WriteLine(b.Data);
+            process.Start();
+            process.BeginErrorReadLine();
+            process.BeginOutputReadLine();
+
+            process.WaitForExit();
+
+            SetBashProcess(commandName, "");
+        }
+
         #endregion
     }
 }

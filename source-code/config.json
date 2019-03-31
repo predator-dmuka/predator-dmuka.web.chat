@@ -1,10 +1,32 @@
 {
-	"databases": {
-		"PredatorDmuka_Web_Chat": {
-			"connection_string_server": "User ID=postgres;Password=1;Host=localhost;Port=5432;",
-			"connection_string": "User ID=postgres;Password=1;Host=localhost;Port=5432;Database=PredatorDmuka_Web_Chat;"
-		}
-	},
-	"projects": {
-	}
+  "databases": {
+    "PredatorDmuka_Web_Chat": {
+      "connection_string_server": "User ID=postgres;Password=1;Host=localhost;Port=5432;",
+      "connection_string": "User ID=postgres;Password=1;Host=localhost;Port=5432;Database=PredatorDmuka_Web_Chat;"
+    }
+  },
+  "projects": {
+    "test-consoleapp": {
+      "commands": [
+        {
+          "main": false,
+          "name": "dotnet",
+          "arguments": "clean",
+          "path": "Test.ConsoleApp"
+        },
+        {
+          "main": false,
+          "name": "dotnet",
+          "arguments": "build",
+          "path": "Test.ConsoleApp"
+        },
+        {
+          "main": true,
+          "name": "dotnet",
+          "arguments": "run",
+          "path": "Test.ConsoleApp"
+        }
+      ]
+    }
+  }
 }
